@@ -7,6 +7,7 @@ from typing import Dict, Any
 import config
 from event_management.base_handler import EventHandler
 from orders.commands.order_event_producer import OrderEventProducer
+from orders.commands.write_order import modify_order
 
 class PaymentCreatedHandler(EventHandler):
     """Handles PaymentCreated events"""
@@ -20,19 +21,30 @@ class PaymentCreatedHandler(EventHandler):
         return "PaymentCreated"
     
     def handle(self, event_data: Dict[str, Any]) -> None:
-        """Execute every time the event is published"""
-        # TODO: Consultez le diagramme de machine à états pour savoir quelle opération effectuer dans cette méthode. Mettez votre commande à jour avec le nouveau payment_id.
-        # N'oubliez pas d'enregistrer le payment_link dans votre commande
-        event_data["payment_link"] = "todo-add-payment-link-here"
-
         try:
-            # Si l'operation a réussi, déclenchez SagaCompleted.
-            event_data['event'] = "SagaCompleted"
-            self.logger.debug(f"payment_link={event_data['payment_link']}")
-            OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
+            payment_id = event_data["payment_id"]
+
+            success = modify_order(
+                event_data["order_id"],
+                event_data.get("is_paid", False),
+                payment_id
+            )
+
+            if not success:
+                raise ValueError("La commande n'a pas pu être mise à jour.")
+
+            event_data["payment_link"] = (
+                f"http://api-gateway:8080/payments-api/payments/process/{payment_id}"
+            )
+            event_data["event"] = "SagaCompleted"
 
         except Exception as e:
-            # TODO: Si l'operation a échoué, déclenchez l'événement adéquat selon le diagramme.
-            event_data['error'] = str(e)
+            event_data["event"] = "PaymentCreationFailed"
+            event_data["error"] = str(e)
+
+        OrderEventProducer().get_instance().send(
+            config.KAFKA_TOPIC,
+            value=event_data
+        )
 
 

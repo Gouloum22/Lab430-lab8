@@ -11,6 +11,7 @@ from logger import Logger
 from orders.commands.order_event_producer import OrderEventProducer
 from orders.commands.write_order import modify_order
 from payments.models.outbox import Outbox
+from db import get_sqlalchemy_session, get_redis_conn
 
 class OutboxProcessor():
     """Process items in the outbox"""
@@ -57,6 +58,22 @@ class OutboxProcessor():
                 # TODO: après la mise à jour à MySQL, il faut également mettre la commande à jour dans Redis
                 # Vous pouvez réutiliser le code présent dans OrderController, lignes 40-43
                 update_succeeded = modify_order(event_data["order_id"], True, order.payment_id)
+
+                payment_link = (
+                    f"http://api-gateway:8080/payments-api/payments/process/{order.payment_id}"
+                )
+
+                redis_conn = get_redis_conn()
+                redis_conn.hset(
+                    f"order:{event_data['order_id']}",
+                    "payment_link",
+                    payment_link
+                )
+
+                event_data["payment_id"] = order.payment_id
+                event_data["is_paid"] = True
+                event_data["payment_link"] = payment_link
+
                 event_data["payment_link"] = f"http://api-gateway:8080/payments-api/payments/process/{order.payment_id}"
                 if not update_succeeded:
                     raise Exception(f"Erreur : la mise à jour de la commande après la génération du paiement a échoué.")
