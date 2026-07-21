@@ -117,8 +117,16 @@ Code du stock_decreased_handler:
 
 ## Test de Charge
 
+Avec 150 utilisateurs, le système a traité 2893 requêtes avec environ 11,8 % d’échecs. Le temps de réponse moyen était de 2762 ms et le 95e percentile de 4600 ms. On remarque que les temps de réponse et les erreurs augmentent avec le nombre d’utilisateurs, ce qui montre que l’application commence à être surchargée sous une forte charge.
+
+![alt text](image.png)
+
 <p align="center">8.1 Statistiques locust</p>
 
+![alt text](image-2.png)
+
 <p align="center">8.2 Charts locust</p>
+
+![alt text](image-1.png)
 
 <p align="center">8.3 Erreurs locust</p>

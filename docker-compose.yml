@@ -38,6 +38,18 @@ services:
       retries: 5
       start_period: 10s
 
+  locust:
+    image: locustio/locust
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./locustfiles:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --host=http://store_manager:5000
+    networks:
+      - labo08-network
+    depends_on:
+      - krakend
+
   redis:
     image: redis:7
     restart: unless-stopped
